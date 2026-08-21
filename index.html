@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>TaskFlow</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="auth-screen">
+    <h1>TaskFlow</h1>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Senha">
+    <button id="btn-login">Entrar</button>
+    <button id="btn-register">Cadastrar</button>
+    <p id="auth-error"></p>
+  </div>
+
+<div id="tasks-screen" hidden>
+  <h1>Minhas tarefas</h1>
+  <button id="btn-logout">Sair</button>
+
+  <input type="text" id="new-title" placeholder="Título da tarefa">
+  <input type="text" id="new-description" placeholder="Descrição (opcional)">
+  <button id="btn-add-task">Adicionar tarefa</button>
+
+  <ul id="task-list"></ul>
+</div>
+
+  <script src="app.js"></script>
+</body>
+</html>
