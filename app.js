@@ -5,8 +5,44 @@ const tasksScreen = document.getElementById("tasks-screen");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 const authError = document.getElementById("auth-error");
+const authForm = document.getElementById("auth-form");
+const authSubmitBtn = document.getElementById("btn-auth-submit");
+const authTabs = document.querySelectorAll(".auth-tab");
 
-document.getElementById("btn-register").addEventListener("click", async () => {
+let authMode = "login";
+
+authTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    authTabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    authMode = tab.dataset.tab;
+    authSubmitBtn.textContent = authMode === "login" ? "Entrar" : "Cadastrar";
+    hideAuthError();
+  });
+});
+
+function showAuthMessage(message, type = "error") {
+  authError.textContent = message;
+  authError.classList.toggle("success", type === "success");
+  authError.hidden = false;
+}
+
+function hideAuthError() {
+  authError.hidden = true;
+}
+
+authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  hideAuthError();
+
+  if (authMode === "register") {
+    await handleRegister();
+  } else {
+    await handleLogin();
+  }
+});
+
+async function handleRegister() {
   const response = await fetch(`${API_URL}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -17,14 +53,15 @@ document.getElementById("btn-register").addEventListener("click", async () => {
   });
 
   if (response.ok) {
-    authError.textContent = "Cadastrado! Agora faça login.";
+    document.querySelector('.auth-tab[data-tab="login"]').click();
+    showAuthMessage("Cadastrado! Agora faça login.", "success");
   } else {
     const error = await response.json();
-    authError.textContent = error.detail;
+    showAuthMessage(error.detail);
   }
-});
+}
 
-document.getElementById("btn-login").addEventListener("click", async () => {
+async function handleLogin() {
   const formData = new URLSearchParams();
   formData.append("username", emailInput.value);
   formData.append("password", passwordInput.value);
@@ -40,9 +77,9 @@ document.getElementById("btn-login").addEventListener("click", async () => {
     localStorage.setItem("token", data.access_token);
     showTasksScreen();
   } else {
-    authError.textContent = "Email ou senha incorretos";
+    showAuthMessage("Email ou senha incorretos");
   }
-});
+}
 
 function showTasksScreen() {
   authScreen.hidden = true;
@@ -55,6 +92,21 @@ if (localStorage.getItem("token")) {
 }
 
 const taskList = document.getElementById("task-list");
+const emptyState = document.getElementById("empty-state");
+const taskCount = document.getElementById("task-count");
+const filterButtons = document.querySelectorAll(".filter-btn");
+
+let currentFilter = "all";
+let cachedTasks = [];
+
+filterButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    filterButtons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentFilter = btn.dataset.filter;
+    renderTasks();
+  });
+});
 
 function authHeaders() {
   return {
@@ -68,43 +120,141 @@ async function loadTasks() {
     headers: authHeaders()
   });
 
-  const tasks = await response.json();
-  taskList.innerHTML = "";
-
-  tasks.forEach(task => {
-    const li = document.createElement("li");
-
-    const span = document.createElement("span");
-    span.textContent = `${task.title} — ${task.description || ""}`;
-
-    const editBtn = document.createElement("button");
-    editBtn.textContent = "Editar";
-    editBtn.addEventListener("click", () => editTask(task));
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Excluir";
-    deleteBtn.addEventListener("click", () => deleteTask(task.id));
-
-    li.appendChild(span);
-    li.appendChild(editBtn);
-    li.appendChild(deleteBtn);
-    taskList.appendChild(li);
-  });
+  cachedTasks = await response.json();
+  renderTasks();
 }
 
-async function editTask(task) {
-  const newTitle = prompt("Novo título:", task.title);
-  if (newTitle === null) return;
+function renderTasks() {
+  const filtered = cachedTasks.filter(task => {
+    if (currentFilter === "pending") return !task.done;
+    if (currentFilter === "done") return task.done;
+    return true;
+  });
 
-  const newDescription = prompt("Nova descrição:", task.description || "");
+  taskList.innerHTML = "";
+  emptyState.hidden = filtered.length > 0;
+
+  filtered.forEach(task => taskList.appendChild(buildTaskItem(task)));
+
+  const doneCount = cachedTasks.filter(t => t.done).length;
+  taskCount.textContent = cachedTasks.length
+    ? `${doneCount} de ${cachedTasks.length} concluídas`
+    : "";
+}
+
+function buildTaskItem(task) {
+  const li = document.createElement("li");
+  li.className = "task-item" + (task.done ? " done" : "");
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.className = "task-checkbox";
+  checkbox.checked = task.done;
+  checkbox.addEventListener("change", () => toggleDone(task, checkbox.checked));
+
+  const content = document.createElement("div");
+  content.className = "task-content";
+
+  const title = document.createElement("span");
+  title.className = "task-title";
+  title.textContent = task.title;
+  content.appendChild(title);
+
+  if (task.description) {
+    const desc = document.createElement("span");
+    desc.className = "task-description";
+    desc.textContent = task.description;
+    content.appendChild(desc);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "task-actions";
+
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.className = "icon-btn";
+  editBtn.title = "Editar";
+  editBtn.textContent = "✏️";
+  editBtn.addEventListener("click", () => startEdit(li, task));
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "icon-btn";
+  deleteBtn.title = "Excluir";
+  deleteBtn.textContent = "🗑️";
+  deleteBtn.addEventListener("click", () => deleteTask(task.id));
+
+  actions.appendChild(editBtn);
+  actions.appendChild(deleteBtn);
+
+  li.appendChild(checkbox);
+  li.appendChild(content);
+  li.appendChild(actions);
+
+  return li;
+}
+
+function startEdit(li, task) {
+  li.innerHTML = "";
+  li.classList.add("editing");
+
+  const titleInput = document.createElement("input");
+  titleInput.type = "text";
+  titleInput.value = task.title;
+
+  const descInput = document.createElement("input");
+  descInput.type = "text";
+  descInput.value = task.description || "";
+  descInput.placeholder = "Descrição (opcional)";
+
+  const actions = document.createElement("div");
+  actions.className = "task-actions";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "icon-btn";
+  saveBtn.title = "Salvar";
+  saveBtn.textContent = "✅";
+  saveBtn.addEventListener("click", () => saveEdit(task, titleInput.value, descInput.value));
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "icon-btn";
+  cancelBtn.title = "Cancelar";
+  cancelBtn.textContent = "✖️";
+  cancelBtn.addEventListener("click", renderTasks);
+
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+
+  li.appendChild(titleInput);
+  li.appendChild(descInput);
+  li.appendChild(actions);
+
+  titleInput.focus();
+}
+
+async function saveEdit(task, title, description) {
+  if (!title.trim()) return;
 
   await fetch(`${API_URL}/tasks/${task.id}`, {
     method: "PUT",
     headers: authHeaders(),
-    body: JSON.stringify({ title: newTitle, description: newDescription })
+    body: JSON.stringify({ title, description })
   });
 
   loadTasks();
+}
+
+async function toggleDone(task, done) {
+  await fetch(`${API_URL}/tasks/${task.id}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify({ done })
+  });
+
+  task.done = done;
+  renderTasks();
 }
 
 async function deleteTask(id) {
@@ -118,18 +268,20 @@ async function deleteTask(id) {
   loadTasks();
 }
 
-document.getElementById("btn-add-task").addEventListener("click", async () => {
-  const title = document.getElementById("new-title").value;
-  const description = document.getElementById("new-description").value;
+document.getElementById("new-task-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const titleField = document.getElementById("new-title");
+  const descField = document.getElementById("new-description");
 
   await fetch(`${API_URL}/tasks`, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ title, description })
+    body: JSON.stringify({ title: titleField.value, description: descField.value })
   });
 
-  document.getElementById("new-title").value = "";
-  document.getElementById("new-description").value = "";
+  titleField.value = "";
+  descField.value = "";
   loadTasks();
 });
 
