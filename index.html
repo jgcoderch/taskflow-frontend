@@ -2,30 +2,69 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaskFlow</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div id="auth-screen">
-    <h1>TaskFlow</h1>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Senha">
-    <button id="btn-login">Entrar</button>
-    <button id="btn-register">Cadastrar</button>
-    <p id="auth-error"></p>
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <div class="brand">
+        <span class="brand-logo">✓</span>
+        <h1>TaskFlow</h1>
+      </div>
+      <p class="auth-subtitle">Organize suas tarefas com simplicidade</p>
+
+      <div class="auth-tabs" id="auth-tabs">
+        <button type="button" class="auth-tab active" data-tab="login">Entrar</button>
+        <button type="button" class="auth-tab" data-tab="register">Cadastrar</button>
+      </div>
+
+      <form id="auth-form">
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="email" placeholder="voce@email.com" required>
+        </label>
+        <label class="field">
+          <span>Senha</span>
+          <input type="password" id="password" placeholder="••••••••" required>
+        </label>
+        <p id="auth-error" class="auth-message" hidden></p>
+        <button type="submit" id="btn-auth-submit" class="btn-primary">Entrar</button>
+      </form>
+    </div>
   </div>
 
-<div id="tasks-screen" hidden>
-  <h1>Minhas tarefas</h1>
-  <button id="btn-logout">Sair</button>
+  <div id="tasks-screen" class="tasks-screen" hidden>
+    <header class="topbar">
+      <div class="brand brand-sm">
+        <span class="brand-logo">✓</span>
+        <h1>TaskFlow</h1>
+      </div>
+      <button id="btn-logout" class="btn-ghost">Sair</button>
+    </header>
 
-  <input type="text" id="new-title" placeholder="Título da tarefa">
-  <input type="text" id="new-description" placeholder="Descrição (opcional)">
-  <button id="btn-add-task">Adicionar tarefa</button>
+    <main class="tasks-main">
+      <form id="new-task-form" class="new-task-card">
+        <input type="text" id="new-title" placeholder="O que você precisa fazer?" required>
+        <input type="text" id="new-description" placeholder="Descrição (opcional)">
+        <button type="submit" class="btn-primary">Adicionar</button>
+      </form>
 
-  <ul id="task-list"></ul>
-</div>
+      <div class="tasks-toolbar">
+        <div class="tasks-filters" id="task-filters">
+          <button type="button" class="filter-btn active" data-filter="all">Todas</button>
+          <button type="button" class="filter-btn" data-filter="pending">Pendentes</button>
+          <button type="button" class="filter-btn" data-filter="done">Concluídas</button>
+        </div>
+        <span id="task-count" class="task-count"></span>
+      </div>
+
+      <ul id="task-list" class="task-list"></ul>
+      <p id="empty-state" class="empty-state" hidden>Nenhuma tarefa por aqui ainda.</p>
+    </main>
+  </div>
 
   <script src="app.js"></script>
 </body>
